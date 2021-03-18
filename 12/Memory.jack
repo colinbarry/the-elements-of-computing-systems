@@ -1,0 +1,90 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Memory.jack
+
+/**
+ * This library provides two services: direct access to the computer's main
+ * memory (RAM), and allocation and recycling of memory blocks. The Hack RAM
+ * consists of 32,768 words, each holding a 16-bit binary number.
+ */ 
+class Memory {
+    static int base;
+    static Array freelist;
+
+    /** Initializes the class. */
+    function void init() {
+        let base = 0;
+        let freelist = 2048;
+        let freelist[0] = 14336;
+        let freelist[1] = 0;
+
+        return;
+    }
+
+    /** Returns the RAM value at the given address. */
+    function int peek(int address) {
+        return base[address];
+    }
+
+    /** Sets the RAM value at the given address to the given value. */
+    function void poke(int address, int value) {
+        let base[address] = value;
+        return;
+    }
+
+    /** Finds an available RAM block of the given size and returns
+     *  a reference to its base address. */
+    function int alloc(int size) {
+        var int ptr, prev;
+        var int bestFitPtr, bestFitPrev;
+        var Array block;
+
+        // Find the best fit
+        let ptr = freelist;
+        while (~(ptr = 0))  {
+            if (ptr[0] > (size + 1)) {
+                if ((bestFitPtr = 0) | (ptr[0] < bestFitPtr[0])) {
+                    let bestFitPtr = ptr;
+                    let bestFitPrev = prev;
+                }
+            } 
+            let prev = ptr;
+            let ptr = ptr[1];
+        }
+
+        // No block of suitable size could be found.
+        if (bestFitPtr = 0) {
+            return 0;
+        }
+
+        // Allocate the block
+        if (size > (bestFitPtr[0] - 3)) {
+            // use whole block
+            let block = bestFitPtr + 1;
+            if (bestFitPrev) {
+                let bestFitPrev[1] = bestFitPtr[1];
+            } else {
+                let freelist = bestFitPtr[1];
+            }
+        } else {
+            // Use a portion from the end of the block
+            let block = bestFitPtr + bestFitPtr[0] - size - 1;
+            let bestFitPtr[0] = bestFitPtr[0] - size - 1;
+            let block[-1] = size + 1;
+        }
+
+        return block;
+    }
+
+    /** De-allocates the given object (cast as an array) by making
+     *  it available for future allocations. */
+    function void deAlloc(Array o) {
+        var int size;
+
+        let o[0] = freelist;
+        let freelist = o - 1;
+
+        return;
+    }    
+}
